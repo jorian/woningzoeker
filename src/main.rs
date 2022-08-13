@@ -33,12 +33,24 @@ fn main() {
             .into_iter()
             .filter(|h| h["city"] == "Zutphen")
             .collect();
-        if found.ne(&house_keeper.list) {
-            house_keeper.list = found;
-            house_keeper.n_houses = house_keeper.list.len();
-            println!("the list changed, send it");
-            send_telegram(&house_keeper, &client)
+
+        for item in &found {
+            if house_keeper.list.iter().any(|hk| hk["id"] == item["id"]) {
+                println!("house already known");
+            } else {
+                println!("house not known! notify!");
+                send_telegram(
+                    (
+                        item["street"].as_str().unwrap(),
+                        item["street_number"].as_str().unwrap(),
+                        item["object_url"].as_str().unwrap(),
+                    ),
+                    &client,
+                );
+            }
         }
+
+        house_keeper.list = found;
 
         thread::sleep(Duration::from_secs(200));
     }
@@ -49,24 +61,24 @@ pub struct HouseKeeper {
     pub list: Vec<Value>,
 }
 
-pub fn send_telegram(house_keeper: &HouseKeeper, client: &Client) {
+pub fn send_telegram(house: (&str, &str, &str), client: &Client) {
     let s_url = format!(
-        "https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={} woningen",
+        "https://api.telegram.org/bot{}/sendMessage?chat_id={}&text=NIEUWE WONING: {} {}%0A%0Ahttps://rebohuurwoning.nl{}",
         std::env::var("TELEGRAM_BOT_TOKEN").unwrap(),
         std::env::var("TELEGRAM_USER_ID").unwrap(),
-        house_keeper.n_houses
+        house.0, house.1, house.2
     );
     let _response = client.get(&s_url).send().unwrap();
 
-    for v in &house_keeper.list {
-        let s_url = format!(
-            "https://api.telegram.org/bot{}/sendMessage?chat_id={}&text=NIEUWE WONING:%0A{} {}%0A%0Ahttps://rebohuurwoning.nl{}",
-            std::env::var("TELEGRAM_BOT_TOKEN").unwrap(),
-            std::env::var("TELEGRAM_USER_ID").unwrap(),
-            v["street"].as_str().unwrap(),
-            v["street_number"].as_str().unwrap(),
-            v["object_url"].as_str().unwrap()
-        );
-        let _response = client.get(&s_url).send().unwrap();
-    }
+    // for v in &house_keeper.list {
+    //     let s_url = format!(
+    //         "https://api.telegram.org/bot{}/sendMessage?chat_id={}&text=NIEUWE WONING:%0A{} {}%0A%0Ahttps://rebohuurwoning.nl{}",
+    //         std::env::var("TELEGRAM_BOT_TOKEN").unwrap(),
+    //         std::env::var("TELEGRAM_USER_ID").unwrap(),
+    //         v["street"].as_str().unwrap(),
+    //         v["street_number"].as_str().unwrap(),
+    //         v["object_url"].as_str().unwrap()
+    //     );
+    //     let _response = client.get(&s_url).send().unwrap();
+    // }
 }
