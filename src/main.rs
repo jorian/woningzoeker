@@ -27,17 +27,6 @@ fn vesteda() {
 
     let client = reqwest::blocking::Client::new();
 
-    // let mut placeObject = HashMap::new();
-    // placeObject.insert("name", "Zutphen, Nederland");
-    // placeObject.insert("placeType", "1");
-    // placeObject.insert("lng", "6.19605827");
-    // placeObject.insert("lat", "52.1427345");
-
-    // let mut json = HashMap::new();
-    // json.insert("place", "Zutphen, Nederland");
-    // json.insert("placeObject", placeObject);
-    // headers.insert("location", "Zutphen");
-
     let json = json!({
         "place": "Zutphen, Nederland",
 	"placeObject": {
@@ -62,8 +51,6 @@ fn vesteda() {
 	"lat": "52.1427345",
 	"lng": "6.19605827",
 	"radius": 10});
-    // let str: String = String::from(json.as_str().unwrap());
-    // let sstr = str.unwrap();
 
     loop {
         println!("pinging vesteda");
