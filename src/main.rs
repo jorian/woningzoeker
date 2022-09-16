@@ -20,12 +20,12 @@ fn main() {
 
     handles.push(thread::spawn(move || {
         vesteda.query();
-        thread::sleep(Duration::from_secs(180));
+        thread::sleep(Duration::from_secs(1800));
     }));
 
     handles.push(thread::spawn(move || {
         rebo.query();
-        thread::sleep(Duration::from_secs(180));
+        thread::sleep(Duration::from_secs(1800));
     }));
 
     for handle in handles {
