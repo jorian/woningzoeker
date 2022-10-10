@@ -1,9 +1,13 @@
 use std::{thread, time::Duration};
+use tracing::{debug, info};
+use tracing_subscriber::EnvFilter;
 
 use reqwest::{blocking::Client, Url};
 use serde_json::{json, Value};
 
 fn main() {
+    logging_setup();
+
     let mut vesteda = Makelaar::Vesteda(Agent {
         base_url: Url::parse("https://www.vesteda.com/api/units/search").unwrap(),
         client: reqwest::blocking::Client::new(),
@@ -73,9 +77,9 @@ impl Queryable for Makelaar {
 
                 for item in &found {
                     if agent.houses.iter().any(|hk| hk["id"] == item["id"]) {
-                        println!("house already known");
+                        debug!("house already known");
                     } else {
-                        println!("house not known! notify!");
+                        info!("house not known! notify!");
                         send_telegram(
                             (
                                 item["street"].as_str().unwrap(),
@@ -137,9 +141,9 @@ impl Queryable for Makelaar {
 
                 for item in &found {
                     if agent.houses.iter().any(|hk| hk["id"] == item["id"]) {
-                        println!("house already known");
+                        debug!("house already known");
                     } else {
-                        println!("house not known! notify!");
+                        info!("house not known! notify!");
                         send_telegram(
                             (
                                 item["street"].as_str().unwrap(),
@@ -166,4 +170,20 @@ pub fn send_telegram(house: (&str, &str, &str), client: &Client) {
         house.0, house.1, house.2
     );
     let _response = client.get(&s_url).send().unwrap();
+}
+
+fn logging_setup() {
+    if std::env::var("RUST_LIB_BACKTRACE").is_err() {
+        std::env::set_var("RUST_LIB_BACKTRACE", "1")
+    }
+
+    let _ = color_eyre::install();
+
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info")
+    }
+
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 }
