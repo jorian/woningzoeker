@@ -18,14 +18,14 @@ fn main() {
 
     let mut handles = vec![];
 
-    handles.push(thread::spawn(move || {
+    handles.push(thread::spawn(move || loop {
         vesteda.query();
-        thread::sleep(Duration::from_secs(1800));
+        thread::sleep(Duration::from_secs(777));
     }));
 
-    handles.push(thread::spawn(move || {
+    handles.push(thread::spawn(move || loop {
         rebo.query();
-        thread::sleep(Duration::from_secs(1800));
+        thread::sleep(Duration::from_secs(777));
     }));
 
     for handle in handles {
