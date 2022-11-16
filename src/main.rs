@@ -1,8 +1,8 @@
-use std::{thread, time::Duration};
+use std::{collections::HashMap, thread, time::Duration};
 use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
-use reqwest::{blocking::Client, Url};
+use reqwest::{blocking::Client, header::*, Url};
 use serde_json::{json, Value};
 
 fn main() {
@@ -20,15 +20,26 @@ fn main() {
         houses: vec![],
     });
 
+    let mut nmg = Makelaar::NMG(Agent {
+        base_url: Url::parse("https://nmgwonen.nl/huur/").unwrap(),
+        client: reqwest::blocking::Client::new(),
+        houses: vec![],
+    });
+
     let mut handles = vec![];
 
     handles.push(thread::spawn(move || loop {
         vesteda.query();
-        thread::sleep(Duration::from_secs(777));
+        thread::sleep(Duration::from_secs(775));
     }));
 
     handles.push(thread::spawn(move || loop {
         rebo.query();
+        thread::sleep(Duration::from_secs(776));
+    }));
+
+    handles.push(thread::spawn(move || loop {
+        nmg.query();
         thread::sleep(Duration::from_secs(777));
     }));
 
@@ -46,6 +57,7 @@ pub struct Agent {
 pub enum Makelaar {
     Vesteda(Agent),
     Rebo(Agent),
+    NMG(Agent),
 }
 
 trait Queryable {
@@ -157,6 +169,52 @@ impl Queryable for Makelaar {
 
                 agent.houses = found;
             }
+            Makelaar::NMG(agent) => {
+                let mut form_fields = HashMap::new();
+                form_fields.insert("__live", "1");
+                form_fields.insert("adres_plaats_postcode", "zutphen");
+                form_fields.insert("__maps", "paged");
+
+                let mut header_map = HeaderMap::new();
+                header_map.insert(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str(
+                        "multipart/form-data; boundary=---011000010111000001101001",
+                    )
+                    .unwrap(),
+                );
+
+                agent.houses = vec![json!({"total": 0})];
+
+                let res = agent
+                    .client
+                    .post(agent.base_url.as_ref())
+                    .headers(header_map)
+                    .form(&form_fields)
+                    .send()
+                    .unwrap()
+                    .text()
+                    .unwrap();
+
+                let v: Value = serde_json::from_str(&res).unwrap();
+
+                if let Some(total) = v["total"].as_i64() {
+                    if let Some(old_total) = agent.houses.first() {
+                        if old_total != total {
+                            info!("house not known! notify!");
+                            send_telegram(("Onbekend ivm nmg", "na", "https://nmgwonen.nl/huur/#q1ZKTClKLY4vyElMLAFS-cUlyfkpqUpWSlWlJQUZqXlKOkoFiempxUCRjNLSIqVaAA"), &agent.client);
+
+                            let json = json!({ "total": total });
+                            agent.houses = vec![json]
+                        } else {
+                            debug!("house already known");
+                        }
+                    } else {
+                        let json = json!({ "total": total });
+                        agent.houses = vec![json]
+                    }
+                }
+            }
         }
     }
 }
@@ -186,4 +244,20 @@ fn logging_setup() {
     tracing_subscriber::fmt::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let mut nmg = Makelaar::NMG(Agent {
+            base_url: Url::parse("https://nmgwonen.nl/huur/").unwrap(),
+            client: reqwest::blocking::Client::new(),
+            houses: vec![],
+        });
+
+        nmg.query();
+    }
 }
