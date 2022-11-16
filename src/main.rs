@@ -30,7 +30,7 @@ fn main() {
 
     handles.push(thread::spawn(move || loop {
         vesteda.query();
-        thread::sleep(Duration::from_secs(775));
+        thread::sleep(Duration::from_secs(777));
     }));
 
     handles.push(thread::spawn(move || loop {
@@ -40,7 +40,7 @@ fn main() {
 
     handles.push(thread::spawn(move || loop {
         nmg.query();
-        thread::sleep(Duration::from_secs(777));
+        thread::sleep(Duration::from_secs(500));
     }));
 
     for handle in handles {
@@ -184,8 +184,6 @@ impl Queryable for Makelaar {
                     .unwrap(),
                 );
 
-                // agent.houses = vec![json!({"total": 0})];
-
                 let res = agent
                     .client
                     .post(agent.base_url.as_ref())
@@ -198,8 +196,11 @@ impl Queryable for Makelaar {
 
                 let v: Value = serde_json::from_str(&res).unwrap();
 
-                if let Some(total) = v["total"].as_i64() {
+                if let Some(total) = v["total"].as_u64() {
+                    debug!("{}", total);
                     if let Some(old_total) = agent.houses.first() {
+                        let old_total = old_total["total"].as_u64().unwrap();
+                        debug!("old total: {} total: {}", old_total, total);
                         if old_total != total {
                             info!("house not known! notify!");
                             send_telegram(("Onbekend ivm nmg", "na", "https://nmgwonen.nl/huur/#q1ZKTClKLY4vyElMLAFS-cUlyfkpqUpWSlWlJQUZqXlKOkoFiempxUCRjNLSIqVaAA"), &agent.client);
@@ -213,6 +214,8 @@ impl Queryable for Makelaar {
                         let json = json!({ "total": total });
                         agent.houses = vec![json]
                     }
+
+                    debug!("{:?}", &agent.houses);
                 }
             }
         }
@@ -238,7 +241,7 @@ fn logging_setup() {
     let _ = color_eyre::install();
 
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info")
+        std::env::set_var("RUST_LOG", "debug")
     }
 
     tracing_subscriber::fmt::fmt()
