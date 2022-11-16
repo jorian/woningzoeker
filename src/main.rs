@@ -184,7 +184,7 @@ impl Queryable for Makelaar {
                     .unwrap(),
                 );
 
-                agent.houses = vec![json!({"total": 0})];
+                // agent.houses = vec![json!({"total": 0})];
 
                 let res = agent
                     .client
